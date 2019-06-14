@@ -1,0 +1,449 @@
+//
+//  ZQScrollSegementView.swift
+//  ZQScrollPageView
+//
+//  Created by Darren on 2019/4/23.
+//  Copyright © 2019 Darren. All rights reserved.
+//
+
+import UIKit
+
+// MARK: 头部滚动选择视图
+public class ZQScrollSegementView: UIView {
+    
+    public typealias titleClickClosure = (_ titleView:ZQTitleView, _ index:NSInteger) -> ()
+    
+    fileprivate var config:ZQScrollPageConfig?
+    
+    fileprivate var segementConfig:ZQScrollPageSegementConfig?
+    
+    fileprivate var titleConfig:ZQScrollPageTitleConfig?
+    
+    fileprivate var clickClosure:titleClickClosure?
+    
+    fileprivate var extraButton:UIButton?
+    
+    fileprivate var titleViewsArr:[ZQTitleView] = [ZQTitleView]()
+    
+    fileprivate var titleWidthsArr:[CGFloat] = [CGFloat]()
+    
+    fileprivate var normalColorRGBA:[CGFloat] = [CGFloat]()
+    
+    fileprivate var selectedColorRGBA:[CGFloat] = [CGFloat]()
+    
+    fileprivate var deltaRGBA:[CGFloat] = [CGFloat]()
+    
+    fileprivate lazy var coverView:UIView = {
+        let coverView:UIView = UIView()
+        if let segementConfig = self.segementConfig {
+            coverView.backgroundColor = segementConfig.coverBackgroundColor
+            coverView.layer.cornerRadius = segementConfig.coverCornerRadius
+            coverView.layer.masksToBounds = true
+        }
+        return coverView
+    }()
+    
+    fileprivate lazy var lineView:UIView = {
+        let lineView:UIView = UIView()
+        if let segementConfig = self.segementConfig {
+            lineView.backgroundColor = segementConfig.lineColor
+            lineView.layer.cornerRadius = segementConfig.lineCornerRadius
+            lineView.layer.masksToBounds = true
+        }
+        return lineView
+    }()
+    
+    fileprivate lazy var scrollView:UIScrollView = {
+        let scrollView:UIScrollView = UIScrollView()
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.scrollsToTop = false
+        scrollView.isPagingEnabled = false
+        return scrollView
+    }()
+    
+    fileprivate var lastIndex:Int = 0
+    
+    fileprivate var currentIndex:Int = 0
+    
+    fileprivate var selectedTitleView:ZQTitleView?
+    
+    fileprivate var titleViewDefaultTag:Int = 100000
+    
+    fileprivate var xGap:CGFloat = 5.0
+    
+    fileprivate var wGap:CGFloat = 10.0
+    
+    fileprivate var contentSizeXOff:CGFloat = 20.0
+    
+    deinit {
+        print("--__--|| \(self.classForCoder) dealloc")
+    }
+}
+
+// MARK: public
+public extension ZQScrollSegementView {
+    convenience init(frame:CGRect, config:ZQScrollPageConfig, clickClosure:@escaping titleClickClosure) {
+        self.init(frame:frame)
+        if config.titleConfig.titlesArr.count == 0 {return}
+        self.clickClosure = clickClosure
+        initData(config: config)
+        setupViews()
+        updateViews()
+    }
+    
+    func adjustUI(withProgress progress:CGFloat, oldIndex:NSInteger, currentIndex:NSInteger) {
+        guard let segementConfig = segementConfig, let titleConfig = titleConfig, (oldIndex >= 0 && oldIndex < titleConfig.titlesArr.count && currentIndex >= 0 && currentIndex < titleConfig.titlesArr.count) else {
+            return
+        }
+        lastIndex = currentIndex
+        let lastTitleView:ZQTitleView = titleViewsArr[oldIndex]
+        let currentTitleView:ZQTitleView = titleViewsArr[currentIndex]
+        
+        var xDistance:CGFloat = currentTitleView.frame.origin.x - lastTitleView.frame.origin.x
+        var wDistance:CGFloat = currentTitleView.bounds.size.width - lastTitleView.bounds.size.width
+        
+        var frame:CGRect = lineView.frame
+        if !titleConfig.scrollTitle {
+            frame.origin.x = lastTitleView.frame.origin.x + xDistance * progress
+            frame.size.width = lastTitleView.bounds.size.width + wDistance * progress
+            lineView.frame = frame
+            
+            frame = coverView.frame
+            frame.origin.x = lastTitleView.frame.origin.x + xDistance * progress - xGap
+            frame.size.width = lastTitleView.bounds.size.width + wDistance * progress + wGap
+            coverView.frame = frame
+        }
+        else {
+            if segementConfig.adjustCoverOrLineWidth {
+                frame = lineView.frame
+                let lastLineW:CGFloat = titleWidthsArr[oldIndex] + wGap
+                let currentLineW:CGFloat = titleWidthsArr[currentIndex] + wGap
+                wDistance = currentLineW - lastLineW
+                let lastLineX:CGFloat = lastTitleView.frame.origin.x + (lastTitleView.bounds.size.width - lastLineW) * 0.5
+                let currentLineX:CGFloat = currentTitleView.frame.origin.x + (currentTitleView.bounds.size.width - currentLineW) * 0.5
+                xDistance = currentLineX - lastLineX
+                frame.origin.x = lastLineX + xDistance * progress
+                frame.size.width = lastLineW + wDistance * progress
+                lineView.frame = frame
+                
+                frame = coverView.frame
+                frame.origin.x = lastLineX + xDistance * progress
+                frame.size.width = lastLineW + wDistance * progress
+                coverView.frame = frame
+            }
+            else {
+                frame = coverView.frame
+                frame.origin.x = lastTitleView.frame.origin.x + xDistance * progress
+                frame.size.width = lastTitleView.bounds.size.width + wDistance * progress
+                coverView.frame = frame
+            }
+        }
+        
+        if titleConfig.gradualChangeColor {
+            if selectedColorRGBA.count == 4 && normalColorRGBA.count == 4 && deltaRGBA.count == 4 {
+                lastTitleView.textColor = UIColor(red: selectedColorRGBA[0] + deltaRGBA[0] * progress,
+                                                  green: selectedColorRGBA[1] + deltaRGBA[1] * progress,
+                                                  blue: selectedColorRGBA[2] + deltaRGBA[2] * progress,
+                                                  alpha: selectedColorRGBA[3] + deltaRGBA[3] * progress)
+                
+                currentTitleView.textColor = UIColor(red: normalColorRGBA[0] - deltaRGBA[0] * progress,
+                                                  green: normalColorRGBA[1] - deltaRGBA[1] * progress,
+                                                  blue: normalColorRGBA[2] - deltaRGBA[2] * progress,
+                                                  alpha: normalColorRGBA[3] - deltaRGBA[3] * progress)
+            }
+        }
+        
+        if !titleConfig.scaleTitle {
+            return
+        }
+        let deltaScale:CGFloat = titleConfig.scaleMax - 1.0
+        lastTitleView.currentTransformScale = titleConfig.scaleMax - deltaScale * progress
+        currentTitleView.currentTransformScale = 1.0 + deltaScale * progress
+    }
+    
+    func adjustTitleOffSetToCurrentIndex(index:NSInteger) {
+        currentIndex = index
+        selectedTitle(false, isTap: false)
+    }
+    
+    func setSelectedIndex(index:NSInteger, animated:Bool) {
+        guard let titleConfig = titleConfig, (index >= 0 && index < titleConfig.titlesArr.count) else {
+            return
+        }
+        currentIndex = index
+        selectedTitle(animated, isTap: false)
+    }
+    
+    func reloadData(config:ZQScrollPageConfig) {
+        if config.titleConfig.titlesArr.count == 0 {return}
+        scrollView.isScrollEnabled = false
+        initData(config: config)
+        scrollView.subviews.forEach { (view) in
+            view.removeFromSuperview()
+        }
+        subviews.forEach { (view) in
+            view.removeFromSuperview()
+        }
+        setupViews()
+        updateViews()
+        titleViewsArr.forEach { (view) in
+            view.didDeSelected()
+        }
+        scrollView.isScrollEnabled = true
+        setSelectedIndex(index: 0, animated: true)
+    }
+}
+
+// MARK: private
+extension ZQScrollSegementView {
+    fileprivate func initData(config:ZQScrollPageConfig) {
+        backgroundColor = config.segementConfig.backgroundColor
+        self.config = config
+        self.segementConfig = config.segementConfig
+        let titleConfig = config.titleConfig
+        self.titleConfig = titleConfig
+        currentIndex = 0
+        lastIndex = 0
+        titleViewsArr.removeAll()
+        titleWidthsArr.removeAll()
+        normalColorRGBA = titleConfig.normalColor.cgColor.components ?? [CGFloat]()
+        selectedColorRGBA = titleConfig.selectedColor.cgColor.components ?? [CGFloat]()
+        deltaRGBA = [CGFloat]()
+        if normalColorRGBA.count == selectedColorRGBA.count {
+            for i in 0..<normalColorRGBA.count {
+                deltaRGBA.append(normalColorRGBA[i] - selectedColorRGBA[i])
+            }
+        }
+    }
+    
+    fileprivate func setupViews() {
+        addSubview(scrollView)
+        setupTitles()
+        setupScrollLineOrCoverOrExtraBtn()
+    }
+    
+    fileprivate func setupScrollLineOrCoverOrExtraBtn() {
+        guard let segementConfig = segementConfig else {
+            return
+        }
+        if segementConfig.showExtraButton {
+            addSubview(segementConfig.extraButton)
+            extraButton = segementConfig.extraButton
+        }
+        if let segementConfig = self.segementConfig {
+            scrollView.bounces = segementConfig.bounces
+            if segementConfig.showLine {
+                scrollView.addSubview(lineView)
+            }
+            if segementConfig.showCover {
+                scrollView.addSubview(coverView)
+            }
+        }
+    }
+    
+    fileprivate func setupTitles() {
+        guard let titleConfig = titleConfig else {
+            return
+        }
+        for i:Int in 0..<titleConfig.titlesArr.count {
+            let titleView:ZQTitleView = ZQTitleView(config: titleConfig, title: titleConfig.titlesArr[i], index: i)
+            let tap:UITapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(actionForTapTitle(tap:)))
+            titleView.addGestureRecognizer(tap)
+            scrollView.addSubview(titleView)
+            titleViewsArr.append(titleView)
+            titleWidthsArr.append(titleView.getTotalWidth())
+        }
+    }
+    
+    fileprivate func updateViews() {
+        updateScrollViewAndExtraButton()
+        updateTitleView()
+        updateScrollLineAndCover()
+        updateContentSize()
+    }
+    
+    fileprivate func updateScrollViewAndExtraButton() {
+        if let extraButton = extraButton {
+            let scrollWidth:CGFloat = bounds.size.width - extraButton.bounds.size.width
+            extraButton.frame = CGRect(x: scrollWidth, y: (bounds.size.height - extraButton.bounds.size.height) * 0.5, width: extraButton.bounds.size.width, height: extraButton.bounds.size.height)
+            scrollView.frame = CGRect(x: 0, y: 0, width: scrollWidth, height: bounds.size.height)
+        }
+        else {
+            scrollView.frame = CGRect(x: 0, y: 0, width: bounds.size.width, height: bounds.size.height)
+        }
+    }
+    
+    fileprivate func updateTitleView() {
+        guard let segementConfig = segementConfig, let titleConfig = titleConfig else {
+            return
+        }
+        var titleX:CGFloat = 0.0
+        let titleY:CGFloat = 0.0
+        var titleWidth:CGFloat = 0.0
+        let titleHeight:CGFloat = bounds.size.height - segementConfig.lineHeight
+        let count = titleConfig.titlesArr.count
+        
+        if !titleConfig.scrollTitle {
+            titleWidth = scrollView.bounds.size.width / CGFloat(count)
+            for i:Int in 0..<count {
+                titleX = CGFloat(i) * titleWidth
+                let titleView:ZQTitleView = titleViewsArr[i]
+                titleView.frame = CGRect(x: titleX, y: titleY, width: titleWidth, height: titleHeight)
+                titleView.tag = titleViewDefaultTag + i
+            }
+        }
+        else {
+            let margin:CGFloat = titleConfig.margin
+            var lastLableMaxX:CGFloat = margin
+            var addedMargin:CGFloat = 0.0
+            if titleConfig.autoAdjustTitlesWidth {
+                var allTitlesWidth:CGFloat = margin
+                for i:Int in 0..<count {
+                    allTitlesWidth = allTitlesWidth + titleWidthsArr[i] + margin
+                }
+                addedMargin = allTitlesWidth < scrollView.bounds.size.width ? (scrollView.bounds.size.width - allTitlesWidth) / CGFloat(count) : 0
+            }
+            
+            for i:Int in 0..<count {
+                let titleView:ZQTitleView = titleViewsArr[i]
+                titleWidth = titleWidthsArr[i]
+                titleX = lastLableMaxX + addedMargin / 2
+                lastLableMaxX += (titleWidth + addedMargin + margin)
+                titleView.frame = CGRect(x: titleX, y: titleY, width: titleWidth, height: titleHeight)
+                titleView.tag = titleViewDefaultTag + i
+                if i == 0 {
+                    titleView.didSelected()
+                    selectedTitleView = titleView
+                }
+                else {
+                    titleView.didDeSelected()
+                }
+            }
+        }
+    }
+    
+    fileprivate func updateScrollLineAndCover() {
+        guard let segementConfig = segementConfig, let titleConfig = titleConfig else {
+            return
+        }
+        let firstTitleView:ZQTitleView = titleViewsArr[0]
+        var coverX:CGFloat = firstTitleView.frame.origin.x
+        var coverW:CGFloat = titleConfig.scaleTitle ? firstTitleView.bounds.size.width * titleConfig.scaleMax : firstTitleView.bounds.size.width
+        let coverH:CGFloat = segementConfig.coverHeight
+        let coverY:CGFloat = (bounds.size.height - coverH) * 0.5
+        if !titleConfig.scrollTitle {
+            lineView.frame = CGRect(x: coverX, y: bounds.size.height - segementConfig.lineHeight, width: coverW, height: segementConfig.lineHeight)
+            coverView.frame = CGRect(x: coverX - xGap, y: coverY, width: coverW + wGap, height: coverH)
+        }
+        else {
+            if segementConfig.adjustCoverOrLineWidth {
+                coverW = titleWidthsArr[0] * titleConfig.scaleMax + wGap
+                coverX = (firstTitleView.bounds.size.width - coverW) * 0.5 + titleConfig.margin
+            }
+            lineView.frame = CGRect(x: coverX, y: bounds.size.height - segementConfig.lineHeight, width: coverW, height: segementConfig.lineHeight)
+            coverView.frame = CGRect(x: coverX, y: coverY, width: coverW, height: coverH)
+        }
+    }
+    
+    fileprivate func updateContentSize() {
+        guard let titleConfig = titleConfig else {
+            return
+        }
+        if titleConfig.scrollTitle {
+            if let titleView = titleViewsArr.last {
+                scrollView.contentSize = CGSize(width: titleView.frame.maxX + contentSizeXOff, height: 0.0)
+            }
+        }
+    }
+    
+    fileprivate func selectedTitle(_ animated:Bool, isTap:Bool) {
+        if (currentIndex == lastIndex && isTap) {
+            return
+        }
+        guard let segementConfig = segementConfig, let titleConfig = titleConfig else {
+            return
+        }
+        if lastIndex < 0 || lastIndex >= titleViewsArr.count || currentIndex < 0 || currentIndex >= titleViewsArr.count {
+            return
+        }
+        let lastTitleView:ZQTitleView = titleViewsArr[lastIndex]
+        let currentTitleView:ZQTitleView = titleViewsArr[currentIndex]
+        let animatedTime:CGFloat = animated ? 0.25 : 0.0
+        UIView.animate(withDuration: TimeInterval(animatedTime), animations: { [weak self] in
+            if let self = self {
+                lastTitleView.didDeSelected()
+                currentTitleView.didSelected()
+                if segementConfig.showLine {
+                    var frame:CGRect = self.lineView.frame
+                    if segementConfig.adjustCoverOrLineWidth {
+                        let width:CGFloat = self.titleWidthsArr[self.currentIndex] + self.wGap
+                        let x:CGFloat = currentTitleView.frame.origin.x + (currentTitleView.bounds.size.width - width) * 0.5
+                        frame.origin.x = x
+                        frame.size.width = width
+                    }
+                    else {
+                        frame.origin.x = currentTitleView.frame.origin.x
+                        frame.size.width = currentTitleView.bounds.size.width
+                    }
+                    self.lineView.frame = frame
+                }
+                
+                if segementConfig.showCover {
+                    var frame:CGRect = self.coverView.frame
+                    if !titleConfig.scrollTitle {
+                        frame.origin.x = currentTitleView.frame.origin.x - self.xGap
+                        frame.size.width = currentTitleView.bounds.size.width + self.wGap
+                    }
+                    else {
+                        if segementConfig.adjustCoverOrLineWidth {
+                            let width:CGFloat = self.titleWidthsArr[self.currentIndex] + self.wGap
+                            let x:CGFloat = currentTitleView.frame.origin.x + (currentTitleView.bounds.size.width - width) * 0.5
+                            frame.origin.x = x
+                            frame.size.width = width
+                        } else {
+                            frame.origin.x = currentTitleView.frame.origin.x
+                            frame.size.width = currentTitleView.bounds.size.width
+                        }
+                        self.coverView.frame = frame
+                    }
+                }
+            }
+        }) {[weak self] (finish) in
+            if let self = self {
+                self.updateContentOffsetIfNeed()
+            }
+        }
+        clickClosure?(currentTitleView, currentIndex)
+    }
+    
+    fileprivate func updateContentOffsetIfNeed() {
+        if scrollView.contentSize.width == scrollView.bounds.size.width + contentSizeXOff || currentIndex < 0 || currentIndex >= titleViewsArr.count {
+            return
+        }
+        let titleView:ZQTitleView = titleViewsArr[currentIndex]
+        var offsetX:CGFloat = max(titleView.center.x - bounds.size.width * 0.5, 0)
+        var extraButtonW:CGFloat = 0
+        if let extraButton = extraButton {
+            extraButtonW = extraButton.bounds.size.width
+        }
+        let maxOffsetX:CGFloat = max(scrollView.contentSize.width - (bounds.size.width - extraButtonW), 0)
+        if offsetX > maxOffsetX {
+            offsetX = maxOffsetX
+        }
+        scrollView.setContentOffset(CGPoint(x: offsetX, y: 0.0), animated: true)
+    }
+}
+
+// MARK: action
+extension ZQScrollSegementView {
+    @objc fileprivate func actionForTapTitle(tap:UITapGestureRecognizer) {
+        if let titleView = tap.view {
+            let index:Int = titleView.tag - titleViewDefaultTag
+            if index != currentIndex {
+                lastIndex = currentIndex
+                currentIndex = index
+                selectedTitle(true, isTap: true)
+            }
+        }
+    }
+}
