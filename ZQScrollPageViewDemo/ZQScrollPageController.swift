@@ -36,9 +36,9 @@ class ZQScrollPageController : UIViewController {
         view.addSubview(scrollPageView)
         scrollPageView.setSelectedIndex(index: 3, animated: true)
         
-        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 3) {
-            scrollPageView.reloadData(titlesArr:  ["新闻1", "小说说说1", "杂书评1", "世界真大哈哈哈1", "奇葩说1", "新闻1", "小说说说1", "杂书评1", "世界真大哈哈哈1", "奇葩说1"])
-        }
+//        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 3) {
+//            scrollPageView.reloadData(titlesArr:  ["新闻1", "小说说说1", "杂书评1", "世界真大哈哈哈1", "奇葩说1", "新闻1", "小说说说1", "杂书评1", "世界真大哈哈哈1", "奇葩说1"])
+//        }
     }
 }
 
