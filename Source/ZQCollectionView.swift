@@ -13,7 +13,7 @@ public class ZQCollectionView: UICollectionView {
     
     public typealias ZJCollectionViewShouldBeginPanGestureHandler = ((_ collectionView:ZQCollectionView, _ panGesture:UIPanGestureRecognizer) -> Bool)
     
-    fileprivate var handler:ZJCollectionViewShouldBeginPanGestureHandler?
+    private var handler:ZJCollectionViewShouldBeginPanGestureHandler?
     
     deinit {
         print("--__--|| \(self.classForCoder) dealloc")

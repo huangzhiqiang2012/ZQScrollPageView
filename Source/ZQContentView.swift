@@ -10,18 +10,21 @@ import UIKit
 
 // MARK: 内容视图
 public class ZQContentView: UIView {
-
+    
     deinit {
         unregisteNotification()
         print("--__--|| \(self.classForCoder) dealloc")
     }
     
-    fileprivate lazy var collectionView:ZQCollectionView = {
+    private lazy var layout:UICollectionViewFlowLayout = {
         let layout:UICollectionViewFlowLayout = UICollectionViewFlowLayout()
-        layout.itemSize = bounds.size
         layout.minimumLineSpacing = 0.0
         layout.minimumInteritemSpacing = 0.0
         layout.scrollDirection = .horizontal
+        return layout
+    }()
+    
+    private lazy var collectionView:ZQCollectionView = {
         let collectionView:ZQCollectionView = ZQCollectionView(frame: bounds, collectionViewLayout: layout)
         collectionView.backgroundColor = UIColor.white
         collectionView.isPagingEnabled = true
@@ -37,46 +40,60 @@ public class ZQContentView: UIView {
         return collectionView
     }()
     
-    fileprivate var config:ZQScrollPageConfig?
+    private var config:ZQScrollPageConfig?
     
-    fileprivate weak var parentViewController:UIViewController?
+    private var needManageLifeCycle:Bool {
+        return config?.contentConfig.needManageLifeCycle ?? true
+    }
     
-    fileprivate weak var segementView:ZQScrollSegementView?
+    private weak var parentViewController:UIViewController?
     
-    fileprivate var needManageLifeCycle:Bool = false
+    private weak var segementView:ZQScrollSegementView?
     
-    fileprivate weak var delegate:ZQScrollPageViewDelegate?
+    private weak var delegate:ZQScrollPageViewDelegate?
     
-    fileprivate var currentIndex:Int = 0
+    var currentIndex:Int = 0
     
-    fileprivate var oldIndex:Int = -1
+    private var oldIndex:Int = -1
     
-    fileprivate var oldOffSetX:CGFloat = 0.0
+    private var oldOffSetX:CGFloat = 0.0
     
-    fileprivate var currentChildVc:(UIViewController & ZQScrollPageViewChildVcDelegate)?
+    private var currentChildVc:(UIViewController & ZQScrollPageViewChildVcDelegate)?
     
     /// 是否加载第一页
-    fileprivate var isLoadFirstView:Bool = true
+    private var isLoadFirstView:Bool = true
     
     /// 当这个属性设置为true的时候 就不用处理 scrollView滚动的计算
-    fileprivate var forbidTouchToAdjustPosition:Bool = false
+    private var forbidTouchToAdjustPosition:Bool = false
     
     /// 是否一次滚动超过一页
-    fileprivate var scrollOverOnePage:Bool = false
+    private var scrollOverOnePage:Bool = false
     
-    fileprivate lazy var childVcsDic:NSMutableDictionary = {
+    private lazy var childVcsDic:NSMutableDictionary = {
         let childVcsDic:NSMutableDictionary = NSMutableDictionary()
         return childVcsDic
     }()
+    
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        collectionView.frame = bounds
+        layout.itemSize = bounds.size
+        collectionView.collectionViewLayout = layout
+    }
 }
 
 // MARK: private
 extension ZQContentView {
-    fileprivate func initialize() {
-        guard let navi = self.parentViewController?.parent, navi.isKind(of: UINavigationController.self), (navi as! UINavigationController).viewControllers.count > 1, (navi as! UINavigationController).interactivePopGestureRecognizer != nil else {
+    private func initialize() {
+        guard let parentViewController = parentViewController else {
             return
         }
-        needManageLifeCycle = !(parentViewController?.shouldAutomaticallyForwardAppearanceMethods ?? false)
+        if needManageLifeCycle {
+            assert(!parentViewController.shouldAutomaticallyForwardAppearanceMethods, "\n请注意: 如果你希望所有的子控制器的view的系统生命周期方法被正确的调用\n请重写\(parentViewController.self)的'shouldAutomaticallyForwardAppearanceMethods'方法 并且返回NO\n当然如果你不做这个操作, 子控制器的生命周期方法将不会被正确的调用")
+        }
+        guard let navi = parentViewController.parent, navi.isKind(of: UINavigationController.self), (navi as! UINavigationController).viewControllers.count > 1, (navi as! UINavigationController).interactivePopGestureRecognizer != nil else {
+            return
+        }
         collectionView.setupShouldBeginPanGestureHandler {[weak self] (collectionView:ZQCollectionView, panGesture:UIPanGestureRecognizer) -> Bool in
             if let self = self {
                 let transionX = panGesture.translation(in: panGesture.view).x
@@ -87,7 +104,7 @@ extension ZQContentView {
                 }
                 if let result = self.delegate?.responds(to: #selector(self.delegate?.scrollPageController(_:contentScrollView:shouldBeginPanGesture:))) {
                     if result {
-                        return (self.delegate?.scrollPageController?(self.parentViewController ?? UIViewController(), contentScrollView: collectionView, shouldBeginPanGesture: panGesture)) ?? true
+                        return (self.delegate?.scrollPageController?(parentViewController, contentScrollView: collectionView, shouldBeginPanGesture: panGesture)) ?? true
                     }
                 }
             }
@@ -95,19 +112,19 @@ extension ZQContentView {
         }
     }
     
-    fileprivate func setupViews() {
+    private func setupViews() {
         addSubview(collectionView)
     }
     
-    fileprivate func registeNotification() {
+    private func registeNotification() {
         NotificationCenter.default.addObserver(self, selector: #selector(onReceiveMemoryWarningNotification(_:)), name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
     }
     
-    fileprivate func unregisteNotification() {
+    private func unregisteNotification() {
         NotificationCenter.default.removeObserver(self)
     }
     
-    fileprivate func setupChildViewController(cell:UICollectionViewCell, indexPath:IndexPath) {
+    private func setupChildViewController(cell:UICollectionViewCell, indexPath:IndexPath) {
         let row:Int = indexPath.row
         guard let result = delegate?.responds(to: #selector(delegate?.childViewController(_:forIndex:))), result == true, currentIndex == row else {
             return
@@ -116,14 +133,14 @@ extension ZQContentView {
         let isFirstLoaded:Bool = currentChildVc == nil
         if isFirstLoaded {
             currentChildVc = delegate?.childViewController(nil, forIndex: indexPath.row)
-            currentChildVc?.zq_currentIndex = row
+            currentChildVc?.ZQ_currentIndex = row
             childVcsDic.setValue(currentChildVc, forKey: row.description)
         }
         else {
             delegate?.childViewController(currentChildVc, forIndex: row)
         }
         if let currentChildVc = currentChildVc {
-            if currentChildVc.zq_scrollViewController != parentViewController {
+            if currentChildVc.ZQ_scrollViewController != parentViewController {
                 parentViewController?.addChild(currentChildVc)
             }
             currentChildVc.view.frame = cell.contentView.bounds
@@ -149,7 +166,7 @@ extension ZQContentView {
         }
     }
     
-    fileprivate func willAppear(index:NSInteger) {
+    private func willAppear(index:NSInteger) {
         guard let controller = childVcsDic.value(forKey: index.description) else {
             return
         }
@@ -160,7 +177,7 @@ extension ZQContentView {
         delegate?.scrollPageController?(parentViewController ?? UIViewController(), childViewControllerWillAppear: controller as! UIViewController, forIndex: index)
     }
     
-    fileprivate func didAppear(index:Int) {
+    private func didAppear(index:Int) {
         guard let controller = childVcsDic.value(forKey: index.description) else {
             return
         }
@@ -171,7 +188,7 @@ extension ZQContentView {
         delegate?.scrollPageController?(parentViewController ?? UIViewController(), childViewControllerDidAppear: controller as! UIViewController, forIndex: index)
     }
     
-    fileprivate func willDisappear(index:Int) {
+    private func willDisappear(index:Int) {
         guard let controller = childVcsDic.value(forKey: index.description) else {
             return
         }
@@ -182,7 +199,7 @@ extension ZQContentView {
         delegate?.scrollPageController?(parentViewController ?? UIViewController(), childViewControllerWillDisappear: controller as! UIViewController, forIndex: index)
     }
     
-    fileprivate func didDisappear(index:Int) {
+    private func didDisappear(index:Int) {
         guard let controller = childVcsDic.value(forKey: index.description) else {
             return
         }
@@ -193,15 +210,15 @@ extension ZQContentView {
         delegate?.scrollPageController?(parentViewController ?? UIViewController(), childViewControllerDidDisappear: controller as! UIViewController, forIndex: index)
     }
     
-    fileprivate func didMoveFromIndex(fromIndex:NSInteger, toIndex:NSInteger, progress:CGFloat) {
+    private func didMoveFromIndex(fromIndex:NSInteger, toIndex:NSInteger, progress:CGFloat) {
         segementView?.adjustUI(withProgress: progress, oldIndex: fromIndex, currentIndex: toIndex)
     }
     
-    fileprivate func adjustSegmentTitleOffsetToCurrentIndex(index:NSInteger) {
+    private func adjustSegmentTitleOffsetToCurrentIndex(index:NSInteger) {
         segementView?.adjustTitleOffSetToCurrentIndex(index: index)
     }
     
-    fileprivate func removeChildVc(childVc:UIViewController) {
+    private func removeChildVc(childVc:UIViewController) {
         childVc.willMove(toParent: nil)
         childVc.view.removeFromSuperview()
         childVc.removeFromParent()
@@ -384,7 +401,7 @@ extension ZQContentView : UICollectionViewDelegate, UICollectionViewDataSource{
 
 // MARK: Notification
 extension ZQContentView {
-    @objc fileprivate func onReceiveMemoryWarningNotification(_ noti:Notification) {
+    @objc private func onReceiveMemoryWarningNotification(_ noti:Notification) {
         for (key, childVc) in childVcsDic {
             if let currentChildVc = currentChildVc {
                 if (childVc as! UIViewController) != currentChildVc {
@@ -398,7 +415,7 @@ extension ZQContentView {
 
 // MARK: UIViewController + Extension
 public extension UIViewController {
-    var zq_scrollViewController:UIViewController? {
+    var ZQ_scrollViewController:UIViewController? {
         get {
             var controller:UIViewController = self
             while true {
@@ -416,7 +433,7 @@ public extension UIViewController {
         }
     }
     
-    var zq_currentIndex:Int {
+    var ZQ_currentIndex:Int {
         set {
             objc_setAssociatedObject(self, "currentIndexKey", newValue, .OBJC_ASSOCIATION_ASSIGN)
         }

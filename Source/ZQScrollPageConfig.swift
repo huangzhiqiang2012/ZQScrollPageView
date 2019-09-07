@@ -34,6 +34,9 @@ public class ZQScrollPageSegementConfig: NSObject {
     /// 背景颜色, 默认 UIColor.white
     public var backgroundColor:UIColor = UIColor.white
     
+    /// 宽, 默认屏幕宽
+    public var width:CGFloat = UIScreen.main.bounds.size.width
+    
     /// 高度, 默认 60.0
     public var height:CGFloat = 60.0
     
@@ -122,6 +125,9 @@ public class ZQScrollPageTitleConfig: NSObject {
 // MARK: 内容配置信息
 public class ZQScrollPageContentConfig: NSObject {
     
+    /// 内容距离顶部菜单的距离 默认 0
+    public var topMargin:CGFloat = 0.0
+    
     /// 是否能滚动 默认 true
     public var canScroll:Bool = true
     
@@ -130,6 +136,11 @@ public class ZQScrollPageContentConfig: NSObject {
     
     /// 点击标题切换的时候,内容视图是否有动画 默认 true
     public var animatedWhenTitleClicked:Bool = true
+    
+    /// 是否需要管理生命周期,默认是true
+    /// 如果你希望所有的子控制器的view的系统生命周期方法被正确的调用,请重写所在控制器的'shouldAutomaticallyForwardAppearanceMethods'方法 并且返回NO
+    /// 当然如果你不做这个操作, 子控制器的生命周期方法将不会被正确的调用 ,如果你仍然想利用子控制器的生命周期方法, 请使用'ZQScrollPageViewChildVcDelegate'提供的代理方法
+    public var needManageLifeCycle:Bool = true
 }
 
 // MARK: 配置信息

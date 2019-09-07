@@ -11,30 +11,30 @@ import UIKit
 // MARK: 头部标题视图
 public class ZQTitleView: UIView {
     
-    fileprivate var config:ZQScrollPageTitleConfig?
+    private var config:ZQScrollPageTitleConfig?
     
-    fileprivate var index:NSInteger = 0
+    private var index:NSInteger = 0
     
-    fileprivate var titleWidth:CGFloat = 0.0
+    private var titleWidth:CGFloat = 0.0
     
-    fileprivate var titleHeight:CGFloat = 0.0
+    private var titleHeight:CGFloat = 0.0
     
-    fileprivate var imageWidth:CGFloat = 0.0
+    private var imageWidth:CGFloat = 0.0
     
-    fileprivate var imageHeight:CGFloat = 0.0
+    private var imageHeight:CGFloat = 0.0
     
-    fileprivate lazy var contentView:UIView = {
+    private lazy var contentView:UIView = {
         let contentView:UIView = UIView()
         return contentView
     }()
     
-    fileprivate lazy var imageView:UIImageView = {
+    private lazy var imageView:UIImageView = {
         let imageView:UIImageView = UIImageView()
         imageView.contentMode = .center
         return imageView
     }()
     
-    fileprivate lazy var label:UILabel = {
+    private lazy var label:UILabel = {
         let label = UILabel()
         label.textAlignment = .center
         if let config = config {
@@ -58,7 +58,7 @@ public class ZQTitleView: UIView {
     
     public override var frame: CGRect {
         didSet {
-             if let config = config {
+            if let config = config {
                 if !config.showImage {
                     contentView.frame = bounds
                     label.frame = bounds
@@ -103,7 +103,7 @@ public extension ZQTitleView {
         isUserInteractionEnabled = true
         backgroundColor = .clear
         label.text = title
-        let size:CGSize = NSString(string: title).boundingRect(with: CGSize(width: Double(MAXFLOAT), height: 0.0), options: NSStringDrawingOptions.usesLineFragmentOrigin, attributes: [NSAttributedString.Key.font : config.normalFont], context: nil).size
+        let size:CGSize = NSString(string: title).boundingRect(with: CGSize(width: Double(MAXFLOAT), height: 0.0), options: NSStringDrawingOptions.usesLineFragmentOrigin, attributes: [NSAttributedString.Key.font : config.selectedFont], context: nil).size
         titleWidth = size.width
         titleHeight = size.height
         setupViews()
@@ -147,7 +147,7 @@ public extension ZQTitleView {
 
 // MARK: private
 extension ZQTitleView {
-    fileprivate func setupViews() {
+    private func setupViews() {
         addSubview(contentView)
         if let config = config {
             if config.showImage {

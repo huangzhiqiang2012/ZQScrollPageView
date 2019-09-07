@@ -10,6 +10,11 @@ import UIKit
 import ZQScrollPageView
 
 class ZQScrollPageController : UIViewController {
+    
+    /// 保证子控制器的生命周期被正常调用
+    override var shouldAutomaticallyForwardAppearanceMethods: Bool {
+        return false
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
