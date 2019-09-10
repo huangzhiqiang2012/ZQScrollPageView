@@ -15,7 +15,7 @@ class ZQScrollPageController : UIViewController {
     override var shouldAutomaticallyForwardAppearanceMethods: Bool {
         return false
     }
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor.white
@@ -34,10 +34,10 @@ class ZQScrollPageController : UIViewController {
 //        titleConfig.normalImagesArr = [UIImage(named: "normal"), UIImage(named: "normal"), UIImage(named: "normal"), UIImage(named: "normal"), UIImage(named: "normal")] as! [UIImage]
 //        titleConfig.selectedImagesArr = [UIImage(named: "selected"), UIImage(named: "selected"), UIImage(named: "selected"), UIImage(named: "selected"), UIImage(named: "selected")] as! [UIImage]
         titleConfig.margin = 20
-        let config = ZQScrollPageConfig()
+        let config = ZQScrollPageConfig.default
         config.segementConfig = segementConfig
         config.titleConfig = titleConfig
-        let scrollPageView:ZQScrollPageView = ZQScrollPageView(frame: CGRect(x: 0, y: y, width: view.bounds.size.width, height: view.bounds.size.height - y), config: config, parentViewController: self, delegate: self)
+        let scrollPageView:ZQScrollPageView = ZQScrollPageView(frame: CGRect(x: 0, y: y, width: view.bounds.size.width, height: view.bounds.size.height - y), parentViewController: self, delegate: self)
         view.addSubview(scrollPageView)
         scrollPageView.setSelectedIndex(index: 3, animated: true)
         

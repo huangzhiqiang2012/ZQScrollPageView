@@ -41,33 +41,28 @@ import UIKit
 
 // MARK: 滚动分页视图
 public class ZQScrollPageView: UIView {
-    private var config:ZQScrollPageConfig?
     
-    private var segementConfig:ZQScrollPageSegementConfig?
+    private var config:ZQScrollPageConfig = ZQScrollPageConfig.default
     
-    private var contentConfig:ZQScrollPageContentConfig?
+    private var segementConfig:ZQScrollPageSegementConfig = ZQScrollPageConfig.default.segementConfig
+    
+    private var contentConfig:ZQScrollPageContentConfig = ZQScrollPageConfig.default.contentConfig
     
     private weak var parentViewController:UIViewController?
     
     private weak var delegate:ZQScrollPageViewDelegate?
     
     private lazy var segmentView:ZQScrollSegementView = {
-        guard let segementConfig = self.segementConfig, let config = self.config, let contentConfig = self.contentConfig else {
-            return ZQScrollSegementView()
-        }
-        let segmentView:ZQScrollSegementView = ZQScrollSegementView(frame: CGRect(x: 0, y: 0, width: segementConfig.width, height: segementConfig.height), config:config, clickClosure: {[weak self] (titleView, index) in
+        let segmentView:ZQScrollSegementView = ZQScrollSegementView(frame: CGRect(x: 0, y: 0, width: segementConfig.width, height: segementConfig.height), clickClosure: {[weak self] (titleView, index) in
             if let self = self {
-                self.contentView.setContentOffSet(offset: CGPoint(x: self.contentView.bounds.size.width * CGFloat(index), y: 0.0), animated: contentConfig.animatedWhenTitleClicked)
+                self.contentView.setContentOffSet(offset: CGPoint(x: self.contentView.bounds.size.width * CGFloat(index), y: 0.0), animated: self.contentConfig.animatedWhenTitleClicked)
             }
         })
         return segmentView
     }()
     
     private lazy var contentView:ZQContentView = {
-        guard let segementConfig = self.segementConfig, let config = self.config else {
-            return ZQContentView()
-        }
-        let contentView:ZQContentView = ZQContentView(frame: CGRect(x: 0, y: segementConfig.height + config.contentConfig.topMargin, width: self.bounds.size.width, height: self.bounds.size.height - segementConfig.height - config.contentConfig.topMargin), config: config, segementView:segmentView, parentViewController: self.parentViewController ?? UIViewController(), delegate: self.delegate)
+        let contentView:ZQContentView = ZQContentView(frame: CGRect(x: 0, y: segementConfig.height + contentConfig.topMargin, width: self.bounds.size.width, height: self.bounds.size.height - segementConfig.height - contentConfig.topMargin), segementView:segmentView, parentViewController: self.parentViewController ?? UIViewController(), delegate: self.delegate)
         return contentView
     }()
     
@@ -83,11 +78,8 @@ public class ZQScrollPageView: UIView {
 
 // MARK: public
 public extension ZQScrollPageView {
-    convenience init(frame:CGRect, config:ZQScrollPageConfig, parentViewController:UIViewController, delegate:ZQScrollPageViewDelegate?) {
+    convenience init(frame:CGRect, parentViewController:UIViewController, delegate:ZQScrollPageViewDelegate?) {
         self.init(frame:frame)
-        self.config = config
-        self.segementConfig = config.segementConfig
-        self.contentConfig = config.contentConfig
         self.parentViewController = parentViewController
         self.delegate = delegate
         setupViews()
@@ -98,22 +90,16 @@ public extension ZQScrollPageView {
     }
     
     func reloadData(titlesArr:[String]) {
-        guard let config = config else {
-            return
-        }
         config.titleConfig.titlesArr = titlesArr
-        reloadData(config: config)
+        reloadData()
     }
     
-    func reloadData(config:ZQScrollPageConfig) {
-        segmentView.reloadData(config: config)
+    func reloadData() {
+        segmentView.reloadData()
         contentView.reload()
     }
     
     func updateTopMargin(topMargin:CGFloat) {
-        guard let segementConfig = self.segementConfig else {
-            return
-        }
         let height = self.bounds.size.height - segementConfig.height - topMargin
         contentView.frame = CGRect(x: 0, y: segementConfig.height + topMargin, width: self.bounds.size.width, height: height)
         contentView.setNeedsLayout()

@@ -143,7 +143,7 @@ public class ZQScrollPageContentConfig: NSObject {
     public var needManageLifeCycle:Bool = true
 }
 
-// MARK: 配置信息
+// MARK: 配置信息,单例,方便设置全局样式
 public class ZQScrollPageConfig: NSObject {
     
     /// 头部配置信息
@@ -154,4 +154,13 @@ public class ZQScrollPageConfig: NSObject {
     
     /// 内容配置信息
     public var contentConfig:ZQScrollPageContentConfig = ZQScrollPageContentConfig()
+    
+    /// 单例
+    public static let `default` = ZQScrollPageConfig()
+    
+    public class func resetConfig() {
+        ZQScrollPageConfig.default.segementConfig = ZQScrollPageSegementConfig()
+        ZQScrollPageConfig.default.titleConfig = ZQScrollPageTitleConfig()
+        ZQScrollPageConfig.default.contentConfig = ZQScrollPageContentConfig()
+    }
 }

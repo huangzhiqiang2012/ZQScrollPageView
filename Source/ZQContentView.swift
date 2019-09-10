@@ -33,17 +33,17 @@ public class ZQContentView: UIView {
         collectionView.delegate = self
         collectionView.dataSource = self
         collectionView.register(UICollectionViewCell.self, forCellWithReuseIdentifier: NSStringFromClass(UICollectionViewCell.self))
-        if let config = config {
-            collectionView.bounces = config.contentConfig.bounces
-            collectionView.isScrollEnabled = config.contentConfig.canScroll
-        }
+        collectionView.bounces = contentConfig.bounces
+        collectionView.isScrollEnabled = contentConfig.canScroll
         return collectionView
     }()
     
-    private var config:ZQScrollPageConfig?
+    private var config:ZQScrollPageConfig = ZQScrollPageConfig.default
+    
+    private var contentConfig:ZQScrollPageContentConfig = ZQScrollPageConfig.default.contentConfig
     
     private var needManageLifeCycle:Bool {
-        return config?.contentConfig.needManageLifeCycle ?? true
+        return contentConfig.needManageLifeCycle
     }
     
     private weak var parentViewController:UIViewController?
@@ -227,9 +227,8 @@ extension ZQContentView {
 
 // MARK: public
 public extension ZQContentView {
-    convenience init(frame: CGRect, config:ZQScrollPageConfig, segementView:ZQScrollSegementView, parentViewController:UIViewController, delegate:ZQScrollPageViewDelegate?) {
+    convenience init(frame: CGRect, segementView:ZQScrollSegementView, parentViewController:UIViewController, delegate:ZQScrollPageViewDelegate?) {
         self.init(frame:frame)
-        self.config = config
         self.segementView = segementView
         self.parentViewController = parentViewController
         self.delegate = delegate
@@ -264,9 +263,6 @@ public extension ZQContentView {
 // MARK: UICollectionViewDelegate & UICollectionViewDelegate
 extension ZQContentView : UICollectionViewDelegate, UICollectionViewDataSource{
     public func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        guard let config = config else {
-            return 0
-        }
         return config.titleConfig.titlesArr.count
     }
     
